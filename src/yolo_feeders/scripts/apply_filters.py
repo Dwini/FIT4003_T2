@@ -17,6 +17,7 @@ import time
 import rospkg
 import rospy
 from cv_bridge import CvBridge, CvBridgeError
+from std_msgs.msg import Header
 from sensor_msgs.msg import Image
 
 # Constant directory locations
@@ -41,53 +42,60 @@ HOTPIXEL_ON = False
 
 # Constant variables that are reused
 bridge = CvBridge()
+last_frame = -1
 
 def images_in(data):
-    # Take the sensor_msgs Image and convert to cv2
-	supplied_image = bridge.imgmsg_to_cv2(data)#, desired_encoding='bgra8')
-	# Obtain dimensions of supplied feed
-	width, height, _ = supplied_image.shape
-	# Create random pixel defects based on the size of the image
-	#pixel_defect_x = random.randint(0, width)
-	#pixel_defect_y = random.randint(0, height)
+	global last_frame
+	frame_num = data.header.seq
+	# Verify we haven't already recorded the interpretation of the frame
+	if frame_num > last_frame:
+		# Update the last frame we saw
+		last_frame = frame_num
+		# Take the sensor_msgs Image and convert to cv2
+		supplied_image = bridge.imgmsg_to_cv2(data)#, desired_encoding='bgra8')
+		# Obtain dimensions of supplied feed
+		width, height, _ = supplied_image.shape
+		# Create random pixel defects based on the size of the image
+		#pixel_defect_x = random.randint(0, width)
+		#pixel_defect_y = random.randint(0, height)
 
 
-	if TRANSFORM_ON:
-		# Make overlay same size as camera resolution
-		overlay = cv2.resize(TRANSFORM_IMAGE, (int(height), int(width)))
+		if TRANSFORM_ON:
+			# Make overlay same size as camera resolution
+			overlay = cv2.resize(TRANSFORM_IMAGE, (int(height), int(width)))
 
-		# Extract the alpha mask of the RGBA image, convert to RGB
-		_, _, _, a = cv2.split(overlay)
-		overlay = cv2.cvtColor(overlay, cv2.COLOR_BGRA2BGR)	
-		
-		# Apply some simple filtering to remove edge noise
-		mask = cv2.medianBlur(a, 5)
-		inv_mask = cv2.bitwise_not(mask)
+			# Extract the alpha mask of the RGBA image, convert to RGB
+			_, _, _, a = cv2.split(overlay)
+			overlay = cv2.cvtColor(overlay, cv2.COLOR_BGRA2BGR)	
+			
+			# Apply some simple filtering to remove edge noise
+			mask = cv2.medianBlur(a, 5)
+			inv_mask = cv2.bitwise_not(mask)
 
-		# Black out the region of the image where the overlay will go
-		supplied_image = cv2.bitwise_and(supplied_image, supplied_image, mask=inv_mask)
-		# Obtain the portion of the overlay image that is the effect
-		overlay = cv2.bitwise_and(overlay, overlay, mask=mask)
+			# Black out the region of the image where the overlay will go
+			supplied_image = cv2.bitwise_and(supplied_image, supplied_image, mask=inv_mask)
+			# Obtain the portion of the overlay image that is the effect
+			overlay = cv2.bitwise_and(overlay, overlay, mask=mask)
 
-		# Merge the two
-		transformed_image = cv2.add(supplied_image, overlay)
-		# Reverse the image ordering to display correctly
-		transformed_image = cv2.cvtColor(transformed_image, cv2.COLOR_BGR2RGB)
+			# Merge the two
+			transformed_image = cv2.add(supplied_image, overlay)
+			# Reverse the image ordering to display correctly
+			transformed_image = cv2.cvtColor(transformed_image, cv2.COLOR_BGR2RGB)
 
-	#if dead_pixel:
-	#	# Dead Pixel
-	#	cv2.circle(suppliedImage, (pixel_defect_x, pixel_defect_y), 5, (0, 0, 0), thickness=-1, lineType=8, shift=0)
-	#if hot_pixel:
-		# Hot Pixel
-	#	cv2.circle(suppliedImage, (pixel_defect_x, pixel_defect_y), 5, (45, 67, 237), thickness=-1, lineType=8, shift=0)
-	#	cv2.circle(suppliedImage, (pixel_defect_x, pixel_defect_y), 3, (63, 82, 63), thickness=-1, lineType=8, shift=0)
-	#	cv2.circle(suppliedImage, (pixel_defect_x, pixel_defect_y), 1, (81, 99, 232), thickness=-1, lineType=8, shift=0)
+		#if dead_pixel:
+		#	# Dead Pixel
+		#	cv2.circle(suppliedImage, (pixel_defect_x, pixel_defect_y), 5, (0, 0, 0), thickness=-1, lineType=8, shift=0)
+		#if hot_pixel:
+			# Hot Pixel
+		#	cv2.circle(suppliedImage, (pixel_defect_x, pixel_defect_y), 5, (45, 67, 237), thickness=-1, lineType=8, shift=0)
+		#	cv2.circle(suppliedImage, (pixel_defect_x, pixel_defect_y), 3, (63, 82, 63), thickness=-1, lineType=8, shift=0)
+		#	cv2.circle(suppliedImage, (pixel_defect_x, pixel_defect_y), 1, (81, 99, 232), thickness=-1, lineType=8, shift=0)
 
-	# Convert cv2 image to imgmsg for YOLO
-	transformed_image_msg = bridge.cv2_to_imgmsg(transformed_image)
-	transformed_image_msg.encoding = 'bgr8'
-	# Publish to topic
-	pub.publish(transformed_image_msg)
+		# Convert cv2 image to imgmsg for YOLO
+		transformed_image_msg = bridge.cv2_to_imgmsg(transformed_image)
+		transformed_image_msg.encoding = 'bgr8'
+		# Publish to topic
+		pub.publish(transformed_image_msg)
 
 def argument_parser():
 	parser = argparse.ArgumentParser()
@@ -114,7 +122,7 @@ if __name__ == '__main__':
 	elif args.scratches:
 		TRANSFORM_IMAGE_NAME = IMAGE_SCRATCHES
 	elif args.filename:
-		TRANSFORM_IMAGE_NAME = args.f
+		TRANSFORM_IMAGE_NAME = args.filename
 	elif args.hotpixel is not None or args.deadpixel is not None:
 		TRANSFORM_IMAGE_NAME = 'NA'
 	else:

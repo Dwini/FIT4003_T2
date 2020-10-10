@@ -1,0 +1,15 @@
+OBJECT_TYPE,OBJECT_COUNT,AVERAGE_PROB
+aeroplane,1,0.5004
+backpack,1,0.6062
+bench,32,0.6947
+bicycle,60,0.8215
+bus,106,0.9111
+car,49759,0.8304
+cow,32,0.68
+fire hydrant,2,0.7397
+motorbike,234,0.8362
+person,1188,0.8563
+stop sign,34,0.6533
+traffic light,7328,0.7863
+train,1,0.5206
+truck,653,0.7217

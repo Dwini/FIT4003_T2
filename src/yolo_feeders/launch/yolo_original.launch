@@ -10,7 +10,7 @@
 
   <!-- ROS and network parameter files -->
   <arg name="ros_param_file"             default="$(optenv HOME)/FIT4003_T2/src/yolo_feeders/config/ros_original.yaml"/>
-  <arg name="network_param_file"         default="$(find darknet_ros)/config/yolov3.yaml"/>
+  <arg name="network_param_file"         default="$(optenv HOME)/FIT4003_T2/src/yolo_feeders/config/yolov3.yaml"/>
   <arg name="ros_node"                   default="yolo_original"/>
 
   <!-- Load parameters -->
